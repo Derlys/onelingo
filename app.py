@@ -31,14 +31,14 @@ def get_challenge():
     }
 
     try:
-        response = requests.post(url, headers=headers, json=data, timeout=10)
-        res_json = response.json()
-        # Devolvemos el contenido del mensaje directamente
-        return res_json['choices'][0]['message']['content']
-    except Exception as e:
-        print(f"Error: {e}")
-        return jsonify({"error": "Falló la conexión con la IA"}), 500
+            response = requests.post(url, headers=headers, json=data, timeout=10)
+            print(f"Respuesta de Groq: {response.status_code} - {response.text}")
 
+            res_json = response.json()
+            return res_json['choices'][0]['message']['content']
+        except Exception as e:
+            print(f"ERROR DETALLADO: {e}")
+            return jsonify({"error": "Falló la conexión con la IA"}), 500
 @app.route('/')
 def index():
     return send_from_directory('.', 'index.html')

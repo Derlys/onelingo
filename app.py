@@ -1,49 +1,43 @@
 from flask import Flask, send_from_directory, jsonify
 from flask_cors import CORS
-from groq import Groq
 import os
+import requests
 import random
 
 app = Flask(__name__, static_folder='.')
 CORS(app)
 
-# Cliente de Groq - Asegúrate de poner GROQ_API_KEY en las variables de Railway
-client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
-
 @app.route('/api/challenge')
 def get_challenge():
+    api_key = os.environ.get("GROQ_API_KEY")
     topics = ["travel", "food", "hobbies", "work", "family", "movies", "nature"]
     chosen_topic = random.choice(topics)
 
+    # URL directa de la API de Groq
+    url = "https://api.groq.com/openai/v1/chat/completions"
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+
+    data = {
+        "model": "llama3-8b-8192",
+        "messages": [
+            {"role": "system", "content": "Return ONLY a JSON object for an A2 English challenge. No intro."},
+            {"role": "user", "content": f"Topic: {chosen_topic}. Format: {{\"question\":\"Translate:\",\"content\":\"...\",\"options\":[\"...\"],\"answer\":0}}"}
+        ],
+        "response_format": {"type": "json_object"}
+    }
+
     try:
-        completion = client.chat.completions.create(
-            model="llama3-8b-8192",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are an English teacher. Return ONLY a JSON object for an A2 challenge. No intro."
-                },
-                {
-                    "role": "user",
-                    "content": f"Topic: {chosen_topic}. Format: {{\"type\":\"reading\",\"question\":\"Translate:\",\"content\":\"...\",\"options\":[\"...\"],\"answer\":0}}"
-                }
-            ],
-            response_format={"type": "json_object"}
-        )
-
-        # Aquí está el return que le faltaba a tu log
-        return completion.choices[0].message.content
-
+        response = requests.post(url, headers=headers, json=data, timeout=10)
+        res_json = response.json()
+        # Devolvemos el contenido del mensaje directamente
+        return res_json['choices'][0]['message']['content']
     except Exception as e:
-        print(f"Error detectado: {e}")
-        # Respuesta de respaldo para que la app nunca se caiga
-        return jsonify({
-            "type": "reading",
-            "question": "Translate:",
-            "content": "I want to learn more English",
-            "options": ["Quiero aprender más inglés", "Me gusta el café", "Tengo sueño"],
-            "answer": 0
-        })
+        print(f"Error: {e}")
+        return jsonify({"error": "Falló la conexión con la IA"}), 500
 
 @app.route('/')
 def index():

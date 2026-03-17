@@ -1,5 +1,5 @@
 from flask import Flask, send_from_directory, jsonify
-import os, requests, random
+import os, requests
 from flask_cors import CORS
 
 app = Flask(__name__, static_folder='.')
@@ -8,24 +8,23 @@ CORS(app)
 @app.route('/api/challenge')
 def get_challenge():
     try:
-        api_key = os.environ.get("GROQ_API_KEY")
+        key = os.environ.get("GROQ_API_KEY")
+        # TEST RÁPIDO: Si esto llega a tu navegador, el código NUEVO subió.
+        if not key:
+            return "ERROR_INTERNO: FALTA_API_KEY_EN_RAILWAY", 500
+
         url = "https://api.groq.com/openai/v1/chat/completions"
-
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
-
+        headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
         data = {
             "model": "llama3-8b-8192",
-            "messages": [{"role": "user", "content": "Generate one A2 English quiz in JSON: {question, content, options, answer}"}],
+            "messages": [{"role": "user", "content": "JSON quiz: {question, content, options, answer}"}],
             "response_format": {"type": "json_object"}
         }
 
-        response = requests.post(url, headers=headers, json=data, timeout=10)
-        return response.text # Enviamos directamente lo que diga Groq
+        r = requests.post(url, headers=headers, json=data, timeout=10)
+        return r.text
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return f"ERROR_TECNICO: {str(e)}", 500
 
 @app.route('/')
 def index():

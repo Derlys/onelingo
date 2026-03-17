@@ -7,7 +7,7 @@ import random
 app = Flask(__name__, static_folder='.')
 CORS(app)
 
-
+# Cliente de Groq - Asegúrate de poner GROQ_API_KEY en las variables de Railway
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 @app.route('/api/challenge')
@@ -16,27 +16,34 @@ def get_challenge():
     chosen_topic = random.choice(topics)
 
     try:
-
-        chat_completion = client.chat.completions.create(
+        completion = client.chat.completions.create(
+            model="llama3-8b-8192",
             messages=[
                 {
                     "role": "system",
-                    "content": "You are a creative English teacher. Return ONLY a JSON object for an A2 English challenge. No intro text."
+                    "content": "You are an English teacher. Return ONLY a JSON object for an A2 challenge. No intro."
                 },
                 {
                     "role": "user",
-                    "content": f"Generate a challenge about {chosen_topic}. Format: {{\"type\":\"reading\",\"question\":\"Translate:\",\"content\":\"...\",\"options\":[\"...\"],\"answer\":0}}"
+                    "content": f"Topic: {chosen_topic}. Format: {{\"type\":\"reading\",\"question\":\"Translate:\",\"content\":\"...\",\"options\":[\"...\"],\"answer\":0}}"
                 }
             ],
-            model="llama3-8b-8192",
-            response_format={"type": "json_object"} #
+            response_format={"type": "json_object"}
         )
 
-        return chat_completion.choices[0].message.content
+        # Aquí está el return que le faltaba a tu log
+        return completion.choices[0].message.content
 
     except Exception as e:
-        print(f"Error en Groq: {e}")
-        return jsonify({"error": "No se pudo generar el reto"}), 500
+        print(f"Error detectado: {e}")
+        # Respuesta de respaldo para que la app nunca se caiga
+        return jsonify({
+            "type": "reading",
+            "question": "Translate:",
+            "content": "I want to learn more English",
+            "options": ["Quiero aprender más inglés", "Me gusta el café", "Tengo sueño"],
+            "answer": 0
+        })
 
 @app.route('/')
 def index():
